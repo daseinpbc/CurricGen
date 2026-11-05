@@ -1,215 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Curriculum Generator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .step-icon { transition: all 0.3s ease-in-out; }
-        .step-text { transition: all 0.3s ease-in-out; }
-        .spinner { border-top-color: #3b82f6; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        /* Simple Prose Styles for Rendered Markdown */
-        .prose h1, .prose h2, .prose h3 { margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
-        .prose h1 { font-size: 1.875rem; }
-        .prose h2 { font-size: 1.5rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
-        .prose h3 { font-size: 1.25rem; }
-        .prose p { margin-bottom: 1em; line-height: 1.6; }
-        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1em; }
-        .prose li { margin-bottom: 0.5em; }
-        .prose a { color: #3b82f6; text-decoration: none; }
-        .prose a:hover { text-decoration: underline; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Curriculum Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; }
+.step-icon { transition: all 0.3s ease-in-out; }
+.step-text { transition: all 0.3s ease-in-out; }
+.spinner { border-top-color: #3b82f6; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Simple Prose Styles for Rendered Markdown */
+.prose h1, .prose h2, .prose h3, .prose h4 { margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
+.prose h1 { font-size: 1.875rem; }
+.prose h2 { font-size: 1.5rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+.prose h3 { font-size: 1.25rem; }
+.prose h4 { font-size: 1.1rem; }
+.prose p { margin-bottom: 1em; line-height: 1.6; }
+.prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1em; }
+.prose ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1em; }
+.prose li { margin-bottom: 0.5em; line-height: 1.6; }
+.prose hr { margin: 1.5em 0; border-color: #e5e7eb; }
+.prose a { color: #3b82f6; text-decoration: none; word-break: break-word; }
+.prose a:hover { text-decoration: underline; }
+</style>
 </head>
 <body class="bg-gray-50 text-gray-800">
-    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI Curriculum Generator</h1>
-            <p class="mt-2 text-md sm:text-lg text-gray-600">Enter any job title to generate a personalized learning path with free online resources.</p>
-        </header>
+<div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
+<header class="text-center mb-8">
+<h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI Curriculum Generator</h1>
+<p class="mt-2 text-md sm:text-lg text-gray-600">Enter any job title to generate a personalized learning path with free online resources.</p>
+</header>
 
-        <div id="inputSection" class="bg-white p-6 rounded-xl shadow-lg mb-8">
-            <div class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="jobTitleInput" placeholder="e.g., Blockchain Developer, UX Researcher..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                <button id="generateBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Generate Curriculum
-                </button>
-            </div>
-        </div>
-        
-        <div id="errorBox" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
-            <strong class="font-bold">Error:</strong>
-            <span class="block sm:inline" id="errorMessage"></span>
-        </div>
-
-        <div id="progressSection" class="hidden bg-white p-6 rounded-xl shadow-lg mb-8">
-            <h2 class="text-xl font-semibold text-center mb-6">Generating your curriculum...</h2>
-            <div class="space-y-4">
-                <div id="step1" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step1_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step1_text" class="step-text text-gray-600 font-medium">Analyzing required skills for the role</p></div>
-                <div id="step2" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step2_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step2_text" class="step-text text-gray-600 font-medium">Structuring the learning path</p></div>
-                <div id="step3" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step3_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step3_text" class="step-text text-gray-600 font-medium">Curating resources and building the syllabus</p></div>
-            </div>
-        </div>
-
-        <div id="resultSection" class="hidden bg-white p-6 sm:p-8 rounded-xl shadow-lg">
-             <div class="flex justify-between items-center mb-6">
-                <h2 id="resultTitle" class="text-2xl sm:text-3xl font-bold text-gray-900"></h2>
-                <button id="copyBtn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Copy</button>
-            </div>
-            <div id="syllabusOutput" class="prose max-w-none"></div>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const jobTitleInput = document.getElementById('jobTitleInput');
-            const generateBtn = document.getElementById('generateBtn');
-            const errorBox = document.getElementById('errorBox');
-            const errorMessage = document.getElementById('errorMessage');
-            const progressSection = document.getElementById('progressSection');
-            const resultSection = document.getElementById('resultSection');
-            const resultTitle = document.getElementById('resultTitle');
-            const syllabusOutput = document.getElementById('syllabusOutput');
-            const copyBtn = document.getElementById('copyBtn');
-
-            const steps = {
-                1: { el: document.getElementById('step1'), icon: document.getElementById('step1_icon'), text: document.getElementById('step1_text') },
-                2: { el: document.getElementById('step2'), icon: document.getElementById('step2_icon'), text: document.getElementById('step2_text') },
-                3: { el: document.getElementById('step3'), icon: document.getElementById('step3_icon'), text: document.getElementById('step3_text') }
-            };
-
-            const spinnerSVG = `<div class="spinner h-5 w-5 rounded-full border-2 border-transparent"></div>`;
-            const checkSVG = `<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
-            
-            const updateStepUI = (stepNumber, status) => {
-                const step = steps[stepNumber];
-                if (!step) return;
-                const { icon, text } = step;
-                
-                // Reset styles
-                icon.classList.remove('bg-gray-300', 'bg-blue-100', 'bg-green-500', 'text-white');
-                text.classList.remove('text-gray-600', 'text-blue-700', 'text-green-700', 'font-semibold');
-                
-                if (status === 'loading') {
-                    icon.innerHTML = spinnerSVG;
-                    icon.classList.add('bg-blue-100');
-                    text.classList.add('text-blue-700', 'font-semibold');
-                } else if (status === 'success') {
-                    icon.innerHTML = checkSVG;
-                    icon.classList.add('bg-green-500', 'text-white');
-                    text.classList.add('text-green-700');
-                } else if (status === 'reset') {
-                    icon.innerHTML = '';
-                    icon.classList.add('bg-gray-300');
-                    text.classList.add('text-gray-600');
-                }
-            };
-
-            const showError = (message) => {
-                errorMessage.textContent = message;
-                errorBox.classList.remove('hidden');
-            };
-
-            const hideError = () => {
-                errorBox.classList.add('hidden');
-            };
-            
-            const parseAndRenderMarkdown = (markdownText) => {
-                // This is a simple parser. More complex markdown would need a library.
-                 return markdownText
-                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
-                    .replace(/<\/ul>\n<ul>/gim, '') // Fix for consecutive list items
-                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\n/g, '<br>');
-            };
-            
-            const generateCurriculum = async () => {
-                const jobTitle = jobTitleInput.value.trim();
-                if (!jobTitle) {
-                    showError("Please enter a job title.");
-                    return;
-                }
-
-                // Reset UI
-                hideError();
-                resultSection.classList.add('hidden');
-                Object.keys(steps).forEach(key => updateStepUI(key, 'reset'));
-                progressSection.classList.remove('hidden');
-                generateBtn.disabled = true;
-
-                try {
-                    // Step 1: Skill Analysis
-                    updateStepUI(1, 'loading');
-                    const prompt = `Based on your extensive knowledge of job requirements and educational programs, act as an expert curriculum designer. A user wants to train to become a "${jobTitle}". Your first task is to perform a detailed analysis and generate a comprehensive, structured learning curriculum for this role.
-
-Follow these steps precisely:
-1.  **Analyze the Role:** Identify the core competencies, key skills (technical and soft), and common tools/technologies required for a "${jobTitle}".
-2.  **Structure Modules:** Organize these skills into a logical sequence of progressive modules, starting from foundational knowledge and moving to advanced topics. Name each module clearly (e.g., "Module 1: Foundational Concepts", "Module 2: Core Technical Skills", etc.).
-3.  **Find Free Resources:** For EACH skill or tool within a module, find one high-quality, free online resource (e.g., a specific tutorial from freeCodeCamp, a documentation page, a video series on YouTube, a course from Khan Academy, an MIT OpenCourseware class). Provide a direct link.
-4.  **Add a Capstone Project:** Conclude with a relevant capstone project idea that would allow the user to build a portfolio piece.
-
-Format the entire output as a single Markdown document. Use ## for module titles and * for each skill/resource pair.`;
-
-                    // **THIS IS THE CRUCIAL CHANGE**
-                    // We call our own secure function, not Google's API directly.
-                    const response = await fetch('/.netlify/functions/generateCurriculum', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: prompt })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'The server responded with an error.');
-                    }
-                    updateStepUI(1, 'success');
-
-                    // Step 2 & 3 are simulated as the AI does it all in one go
-                    updateStepUI(2, 'loading');
-                    updateStepUI(3, 'loading');
-
-                    const data = await response.json();
-                    const syllabusMarkdown = data.curriculum;
-                    
-                    updateStepUI(2, 'success');
-                    updateStepUI(3, 'success');
-                    
-                    // Display results
-                    resultTitle.textContent = `Learning Path: ${jobTitle}`;
-                    syllabusOutput.innerHTML = parseAndRenderMarkdown(syllabusMarkdown);
-                    progressSection.classList.add('hidden');
-                    resultSection.classList.remove('hidden');
-
-                } catch (error) {
-                    console.error(error);
-                    showError(error.message || "An unknown error occurred. Please try again.");
-                    progressSection.classList.add('hidden');
-                } finally {
-                    generateBtn.disabled = false;
-                }
-            };
-            
-            const copyToClipboard = () => {
-                // A simple text-based copy for now
-                const textToCopy = syllabusOutput.innerText;
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy text: ', err);
-                });
-            };
-
-            generateBtn.addEventListener('click', generateCurriculum);
-            copyBtn.addEventListener('click', copyToClipboard);
-        });
-    </script>
-</body>
-</html>
+<div id="inputSection" class="bg-white p-6 rounded-xl shadow-lg mb-8">
