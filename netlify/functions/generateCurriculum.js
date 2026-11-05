@@ -1,65 +1,37 @@
 // Located at: netlify/functions/generateCurriculum.js
+//
+// Receives { jobTitle } from the front end, asks Gemini (with Google Search
+// grounding) to research the role, and returns { curriculum: "<markdown>" }.
+//
+// Netlify environment variables:
+//   GEMINI_API_KEY      (required)  your Gemini API key
+//   GEMINI_MODEL        (optional)  override the default model name below
+//   GEMINI_TIMEOUT_MS   (optional)  how long to wait for Gemini (default 24000)
+//
+// No npm packages needed: this uses the built-in fetch (Node 18+).
 
-exports.handler = async function (event, context) {
-  // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+const API_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+const API_REVISION = '2026-05-20';
+const DEFAULT_MODEL = 'gemini-3.8-flash';
+const TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 24000;
+const MAX_TITLE_LENGTH = 80;
+const MAX_SOURCES = 10;
 
-  try {
-    const { prompt } = JSON.parse(event.body);
-    const apiKey = process.env.GEMINI_API_KEY;
+const reply = (statusCode, body) => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
 
-    if (!apiKey) {
-      throw new Error("API key is not configured.");
-    }
-     if (!prompt) {
-      throw new Error("No prompt was provided.");
-    }
+// Keep the job title to plain, short text so it can't smuggle in extra instructions.
+function cleanJobTitle(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\u0000-\u001f"`\\]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_TITLE_LENGTH);
+}
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const payload = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.6,
-        topP: 0.9,
-        topK: 40,
-      }
-    };
-
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!apiResponse.ok) {
-        const errorBody = await apiResponse.json();
-        console.error("Google API Error:", errorBody);
-        return { statusCode: apiResponse.status, body: JSON.stringify({ error: "Failed to get a response from the AI model." }) };
-    }
-
-    const result = await apiResponse.json();
-
-    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
-        const curriculumText = result.candidates[0].content.parts[0].text;
-        return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ curriculum: curriculumText })
-        };
-    } else {
-        // Handle cases where the model returns no candidates (e.g., safety settings)
-        console.error("Invalid response structure from API:", result);
-        return { statusCode: 500, body: JSON.stringify({ error: "Received an invalid or empty response from the AI model." }) };
-    }
-
-  } catch (error) {
-    console.error("Serverless function error:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
-  }
-};
+// The prompt lives on the server so visitors can't use your API key for other things.
+function buildPrompt(jobTitle) {
