@@ -35,3 +35,224 @@ body { font-family: 'Inter', sans-serif; }
 </header>
 
 <div id="inputSection" class="bg-white p-6 rounded-xl shadow-lg mb-8">
+<div class="flex flex-col sm:flex-row gap-4">
+<input type="text" id="jobTitleInput" maxlength="80" placeholder="e.g., Blockchain Developer, UX Researcher..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+<button id="generateBtn" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed">
+Generate Curriculum
+</button>
+</div>
+</div>
+
+<div id="errorBox" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+<strong class="font-bold">Error:</strong>
+<span class="block sm:inline" id="errorMessage"></span>
+</div>
+
+<div id="progressSection" class="hidden bg-white p-6 rounded-xl shadow-lg mb-8">
+<h2 class="text-xl font-semibold text-center mb-6">Generating your curriculum...</h2>
+<div class="space-y-4">
+<div id="step1" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step1_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step1_text" class="step-text text-gray-600 font-medium">Researching current job postings and courses</p></div>
+<div id="step2" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step2_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step2_text" class="step-text text-gray-600 font-medium">Structuring the learning path</p></div>
+<div id="step3" class="flex items-center space-x-4 p-3 bg-gray-100 rounded-lg"><div id="step3_icon" class="step-icon h-8 w-8 rounded-full flex items-center justify-center bg-gray-300 text-gray-600"></div><p id="step3_text" class="step-text text-gray-600 font-medium">Curating resources and building the syllabus</p></div>
+</div>
+<p class="text-center text-sm text-gray-500 mt-6">This can take up to 30 seconds because the AI is searching the web.</p>
+</div>
+
+<div id="resultSection" class="hidden bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+<div class="flex justify-between items-center mb-6">
+<h2 id="resultTitle" class="text-2xl sm:text-3xl font-bold text-gray-900"></h2>
+<button id="copyBtn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">Copy</button>
+</div>
+<div id="syllabusOutput" class="prose max-w-none"></div>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+const jobTitleInput = document.getElementById('jobTitleInput');
+const generateBtn = document.getElementById('generateBtn');
+const errorBox = document.getElementById('errorBox');
+const errorMessage = document.getElementById('errorMessage');
+const progressSection = document.getElementById('progressSection');
+const resultSection = document.getElementById('resultSection');
+const resultTitle = document.getElementById('resultTitle');
+const syllabusOutput = document.getElementById('syllabusOutput');
+const copyBtn = document.getElementById('copyBtn');
+
+const steps = {
+1: { el: document.getElementById('step1'), icon: document.getElementById('step1_icon'), text: document.getElementById('step1_text') },
+2: { el: document.getElementById('step2'), icon: document.getElementById('step2_icon'), text: document.getElementById('step2_text') },
+3: { el: document.getElementById('step3'), icon: document.getElementById('step3_icon'), text: document.getElementById('step3_text') }
+};
+
+const spinnerSVG = `<div class="spinner h-5 w-5 rounded-full border-2 border-transparent"></div>`;
+const checkSVG = `<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+
+const updateStepUI = (stepNumber, status) => {
+const step = steps[stepNumber];
+if (!step) return;
+const { icon, text } = step;
+
+// Reset styles
+icon.classList.remove('bg-gray-300', 'bg-blue-100', 'bg-green-500', 'text-white');
+text.classList.remove('text-gray-600', 'text-blue-700', 'text-green-700', 'font-semibold');
+
+if (status === 'loading') {
+icon.innerHTML = spinnerSVG;
+icon.classList.add('bg-blue-100');
+text.classList.add('text-blue-700', 'font-semibold');
+} else if (status === 'success') {
+icon.innerHTML = checkSVG;
+icon.classList.add('bg-green-500', 'text-white');
+text.classList.add('text-green-700');
+} else if (status === 'reset') {
+icon.innerHTML = '';
+icon.classList.add('bg-gray-300');
+text.classList.add('text-gray-600');
+}
+};
+
+const showError = (message) => {
+errorMessage.textContent = message;
+errorBox.classList.remove('hidden');
+};
+
+const hideError = () => {
+errorBox.classList.add('hidden');
+};
+
+// --- Markdown rendering -------------------------------------------------
+// Small, safe renderer: all text is HTML-escaped first, and only http(s)
+// links are turned into anchors, so AI output can't inject scripts.
+const escapeHtml = (text) => text
+.replace(/&/g, '&amp;')
+.replace(/</g, '&lt;')
+.replace(/>/g, '&gt;')
+.replace(/"/g, '&quot;');
+
+const renderInline = (text) => escapeHtml(text)
+.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+const parseAndRenderMarkdown = (markdownText) => {
+const lines = String(markdownText || '').replace(/\r\n/g, '\n').split('\n');
+const out = [];
+let listType = null;
+
+const closeList = () => {
+if (listType) { out.push(`</${listType}>`); listType = null; }
+};
+const openList = (type) => {
+if (listType !== type) { closeList(); out.push(`<${type}>`); listType = type; }
+};
+
+for (const rawLine of lines) {
+const line = rawLine.trim();
+let m;
+if (!line) {
+closeList();
+} else if (/^(-{3,}|\*{3,})$/.test(line)) {
+closeList();
+out.push('<hr>');
+} else if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
+closeList();
+const level = Math.min(m[1].length, 4);
+out.push(`<h${level}>${renderInline(m[2])}</h${level}>`);
+} else if ((m = line.match(/^[*-]\s+(.*)$/))) {
+openList('ul');
+out.push(`<li>${renderInline(m[1])}</li>`);
+} else if ((m = line.match(/^\d+[.)]\s+(.*)$/))) {
+openList('ol');
+out.push(`<li>${renderInline(m[1])}</li>`);
+} else {
+closeList();
+out.push(`<p>${renderInline(line)}</p>`);
+}
+}
+closeList();
+return out.join('');
+};
+
+const generateCurriculum = async () => {
+const jobTitle = jobTitleInput.value.trim();
+if (!jobTitle) {
+showError("Please enter a job title.");
+return;
+}
+
+// Reset UI
+hideError();
+resultSection.classList.add('hidden');
+Object.keys(steps).forEach(key => updateStepUI(key, 'reset'));
+progressSection.classList.remove('hidden');
+generateBtn.disabled = true;
+
+// The server does everything in one call, so nudge the progress steps along on a timer.
+const timers = [];
+updateStepUI(1, 'loading');
+timers.push(setTimeout(() => { updateStepUI(1, 'success'); updateStepUI(2, 'loading'); }, 6000));
+timers.push(setTimeout(() => { updateStepUI(2, 'success'); updateStepUI(3, 'loading'); }, 14000));
+
+try {
+// We only send the job title. The server builds the prompt and calls Gemini
+// (with Google Search) using the secret API key, which never reaches the browser.
+const response = await fetch('/.netlify/functions/generateCurriculum', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ jobTitle })
+});
+
+// Read as text first: a platform timeout returns plain text/HTML, not JSON.
+const rawBody = await response.text();
+let data = null;
+try { data = JSON.parse(rawBody); } catch (e) { /* not JSON */ }
+
+if (!response.ok) {
+const fallback = (response.status === 502 || response.status === 504)
+? 'The server took too long to respond. Please try again.'
+: `The server responded with an error (status ${response.status}).`;
+throw new Error((data && data.error) || fallback);
+}
+if (!data || !data.curriculum) {
+throw new Error('The server returned an unexpected response. Please try again.');
+}
+
+[1, 2, 3].forEach(n => updateStepUI(n, 'success'));
+
+// Display results
+resultTitle.textContent = `Learning Path: ${jobTitle}`;
+syllabusOutput.innerHTML = parseAndRenderMarkdown(data.curriculum);
+
+progressSection.classList.add('hidden');
+resultSection.classList.remove('hidden');
+
+} catch (error) {
+console.error(error);
+showError(error.message || "An unknown error occurred. Please try again.");
+progressSection.classList.add('hidden');
+} finally {
+timers.forEach(clearTimeout);
+generateBtn.disabled = false;
+}
+};
+
+const copyToClipboard = () => {
+// A simple text-based copy for now
+const textToCopy = syllabusOutput.innerText;
+navigator.clipboard.writeText(textToCopy).then(() => {
+copyBtn.textContent = 'Copied!';
+setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+}).catch(err => {
+console.error('Failed to copy text: ', err);
+});
+};
+
+generateBtn.addEventListener('click', generateCurriculum);
+copyBtn.addEventListener('click', copyToClipboard);
+jobTitleInput.addEventListener('keydown', (e) => {
+if (e.key === 'Enter' && !generateBtn.disabled) generateCurriculum();
+});
+});
+</script>
+</body>
+</html>
