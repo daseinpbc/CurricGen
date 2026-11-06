@@ -1,3 +1,13 @@
+# Located at: netlify.toml
+#
+# Configures how Netlify builds your site and where it finds your serverless functions.
+
+[build]
+  # Publish the root folder (where index.html lives)
+  publish = "."
+  # Bundle serverless functions from the netlify/functions directory
+  functions = "netlify/functions"
+
 [functions]
-  directory = "netlify/functions"                                     
-  
+  # Use esbuild for fast, clean function bundling
+  node_bundler = "esbuild"
